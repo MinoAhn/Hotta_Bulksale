@@ -6,8 +6,8 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "8_material.png"
-BAG_SOURCE = ROOT / "img_2.png"
+SOURCE = ROOT / "assets" / "reference" / "8_material.png"
+BAG_SOURCE = ROOT / "assets" / "reference" / "img_2.png"
 OUT = ROOT / "assets" / "materials"
 
 CARD_SLOTS = [

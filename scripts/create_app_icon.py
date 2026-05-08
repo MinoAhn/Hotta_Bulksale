@@ -6,7 +6,7 @@ from PIL import Image, ImageOps
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "IMG_6973.PNG"
+SOURCE = ROOT / "assets" / "reference" / "IMG_6973.PNG"
 OUT_ICO = ROOT / "assets" / "app_icon.ico"
 OUT_PREVIEW = ROOT / "assets" / "app_icon_preview.png"
 
