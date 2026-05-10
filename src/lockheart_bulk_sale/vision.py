@@ -21,10 +21,23 @@ class Match:
     y: int
     width: int
     height: int
+    scale: float = 1.0
 
     @property
     def center(self) -> tuple[int, int]:
         return (self.x + self.width // 2, self.y + self.height // 2)
+
+    def offset(self, dx: int, dy: int) -> "Match":
+        return Match(
+            slug=self.slug,
+            name=self.name,
+            confidence=self.confidence,
+            x=self.x + dx,
+            y=self.y + dy,
+            width=self.width,
+            height=self.height,
+            scale=self.scale,
+        )
 
 
 def pil_to_bgr(image: Image.Image) -> np.ndarray:
@@ -46,6 +59,7 @@ def crop(image: np.ndarray, rect: Rect) -> np.ndarray:
 class VisionEngine:
     def __init__(self, materials: Iterable[Material], threshold: float = 0.74) -> None:
         self.threshold = threshold
+        self.scales = (0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15)
         self.templates: dict[str, tuple[Material, list[np.ndarray]]] = {}
         for material in materials:
             paths = sorted(material.icon_path.parent.glob(f"{material.slug}*.png"))
@@ -92,22 +106,37 @@ class VisionEngine:
     ) -> list[Match]:
         roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-        result = cv2.matchTemplate(roi_gray, template_gray, cv2.TM_CCOEFF_NORMED)
-        points = np.where(result >= self.threshold)
-        height, width = template_gray.shape[:2]
-        raw = [
-            Match(
-                slug=material.slug,
-                name=material.name,
-                confidence=float(result[y, x]),
-                x=int(x + region.x),
-                y=int(y + region.y),
-                width=width,
-                height=height,
+        raw: list[Match] = []
+        roi_height, roi_width = roi_gray.shape[:2]
+        for scale in self.scales:
+            scaled = self._resize_template(template_gray, scale)
+            height, width = scaled.shape[:2]
+            if height > roi_height or width > roi_width:
+                continue
+            result = cv2.matchTemplate(roi_gray, scaled, cv2.TM_CCOEFF_NORMED)
+            points = np.where(result >= self.threshold)
+            raw.extend(
+                Match(
+                    slug=material.slug,
+                    name=material.name,
+                    confidence=float(result[y, x]),
+                    x=int(x + region.x),
+                    y=int(y + region.y),
+                    width=width,
+                    height=height,
+                    scale=scale,
+                )
+                for y, x in zip(*points)
             )
-            for y, x in zip(*points)
-        ]
         return self._dedupe(raw)
+
+    @staticmethod
+    def _resize_template(template_gray: np.ndarray, scale: float) -> np.ndarray:
+        if scale == 1.0:
+            return template_gray
+        height, width = template_gray.shape[:2]
+        new_size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        return cv2.resize(template_gray, new_size, interpolation=cv2.INTER_AREA if scale < 1.0 else cv2.INTER_CUBIC)
 
     @staticmethod
     def _dedupe(matches: list[Match]) -> list[Match]:

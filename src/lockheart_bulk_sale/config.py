@@ -29,8 +29,8 @@ class Rect:
 
 @dataclass
 class ClickMap:
-    bag_region: Rect = field(default_factory=lambda: Rect(1120, 430, 760, 630))
-    listing_region: Rect = field(default_factory=lambda: Rect(80, 440, 1010, 620))
+    bag_region: Rect = field(default_factory=lambda: Rect(1080, 340, 820, 720))
+    listing_region: Rect = field(default_factory=lambda: Rect(70, 390, 1040, 680))
     price_text: Point = field(default_factory=lambda: Point(1128, 673))
     price_minus: Point = field(default_factory=lambda: Point(1038, 673))
     price_plus: Point = field(default_factory=lambda: Point(1217, 673))
@@ -76,6 +76,7 @@ def load_settings() -> AppSettings:
         return AppSettings()
     raw = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     click_raw = raw.get("click_map", {}) if raw.get("automation_schema_version") == 2 else {}
+    defaults_map = ClickMap()
     click_map = ClickMap(
         bag_region=Rect(**click_raw.get("bag_region", asdict(ClickMap().bag_region))),
         listing_region=Rect(**click_raw.get("listing_region", asdict(ClickMap().listing_region))),
@@ -103,6 +104,10 @@ def load_settings() -> AppSettings:
         listing_scroll_anchor=Point(**click_raw.get("listing_scroll_anchor", click_raw.get("scroll_anchor", asdict(ClickMap().listing_scroll_anchor)))),
         bag_scroll_anchor=Point(**click_raw.get("bag_scroll_anchor", asdict(ClickMap().bag_scroll_anchor))),
     )
+    if asdict(click_map.bag_region) == {"x": 1120, "y": 430, "w": 760, "h": 630}:
+        click_map.bag_region = defaults_map.bag_region
+    if asdict(click_map.listing_region) == {"x": 80, "y": 440, "w": 1010, "h": 620}:
+        click_map.listing_region = defaults_map.listing_region
     defaults = AppSettings()
     defaults.window_title_keyword = raw.get("window_title_keyword", defaults.window_title_keyword)
     defaults.match_threshold = float(raw.get("match_threshold", defaults.match_threshold))

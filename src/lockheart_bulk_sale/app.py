@@ -456,10 +456,10 @@ class App(ctk.CTk):
         bag, listing = bot.scan()
         self._thread_log(f"扫描步骤 3/4：背包区域识别到 {len(bag)} 个匹配，上架区域识别到 {len(listing)} 个匹配。")
         lines = ["背包区域:"]
-        lines.extend([f"  {m.name} {m.confidence:.2f} @ {m.center}" for m in bag] or ["  未识别到材料"])
+        lines.extend([f"  {m.name} {m.confidence:.2f} scale {m.scale:.2f} @ {m.center}" for m in bag] or ["  未识别到材料"])
         lines.append("")
         lines.append("上架区域:")
-        lines.extend([f"  {m.name} {m.confidence:.2f} @ {m.center}" for m in listing] or ["  未识别到材料"])
+        lines.extend([f"  {m.name} {m.confidence:.2f} scale {m.scale:.2f} @ {m.center}" for m in listing] or ["  未识别到材料"])
         self.log_queue.put("__SCAN__" + "\n".join(lines))
         self._thread_log("扫描步骤 4/4：识别报告已生成，正在恢复程序窗口。")
         self.log_queue.put("__RESTORE__")
