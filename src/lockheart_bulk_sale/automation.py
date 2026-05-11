@@ -202,15 +202,16 @@ class GameAutomation:
         if delta == 0:
             self.log("目标价格为 20，无需调整价格。")
             return
-        minus_button, plus_button = self._find_price_step_buttons()
-        fallback = self._screen_point(self.settings.click_map.price_plus if delta > 0 else self.settings.click_map.price_minus)
+        minus_button, plus_button = self._wait_for_price_step_buttons()
+        fallback_minus, fallback_plus = self._estimate_price_step_buttons()
+        fallback = fallback_plus if delta > 0 else fallback_minus
         button = (plus_button if delta > 0 else minus_button) or fallback
         label = "加号" if delta > 0 else "减号"
         steps = abs(delta)
         if plus_button and minus_button:
             self.log(f"价格按钮定位：减号 {minus_button}，加号 {plus_button}。")
         else:
-            self.log(f"价格按钮自动定位不完整，使用备用{label}坐标 {button}。")
+            self.log(f"价格按钮自动定位不完整，使用推算{label}坐标 {button}。")
         self.log(f"价格调整：从默认 {base_price} 调整到 {price}，点击{label} {steps} 次。")
         for index in range(steps):
             self._click(button, f"价格{label}调整 {index + 1}/{steps}")
@@ -426,6 +427,23 @@ class GameAutomation:
         ctx = self._context()
         image = pyautogui.screenshot(region=(ctx.left, ctx.top, ctx.width, ctx.height)).convert("RGB")
         return self._locate_price_step_buttons(image, ctx)
+
+    def _wait_for_price_step_buttons(self, timeout: float = 1.2) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+        deadline = time.monotonic() + timeout
+        last: tuple[tuple[int, int] | None, tuple[int, int] | None] = (None, None)
+        while time.monotonic() < deadline:
+            self._guard()
+            last = self._find_price_step_buttons()
+            if last[0] and last[1]:
+                return last
+            time.sleep(0.08)
+        return last
+
+    def _estimate_price_step_buttons(self) -> tuple[tuple[int, int], tuple[int, int]]:
+        if self.last_sell_button:
+            button_x, button_y = self.last_sell_button
+            return (button_x + 23, button_y - 269), (button_x + 203, button_y - 269)
+        return self._screen_point(Point(1037, 595)), self._screen_point(Point(1217, 595))
 
     @staticmethod
     def _locate_price_step_buttons(image: Image.Image, ctx: WindowContext) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
